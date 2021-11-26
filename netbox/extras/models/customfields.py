@@ -7,6 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.core.validators import RegexValidator, ValidationError
 from django.db import models
 from django.urls import reverse
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 
 from extras.choices import *
@@ -30,7 +31,7 @@ class CustomFieldManager(models.Manager.from_queryset(RestrictedQuerySet)):
         return self.get_queryset().filter(content_types=content_type)
 
 
-@extras_features('webhooks')
+@extras_features('webhooks', 'export_templates')
 class CustomField(ChangeLoggedModel):
     content_types = models.ManyToManyField(
         to=ContentType,
@@ -287,7 +288,7 @@ class CustomField(ChangeLoggedModel):
         field.model = self
         field.label = str(self)
         if self.description:
-            field.help_text = self.description
+            field.help_text = escape(self.description)
 
         return field
 

@@ -11,8 +11,8 @@ from django_tables2 import RequestConfig
 from django_tables2.data import TableQuerysetData
 from django_tables2.utils import Accessor
 
+from extras.choices import CustomFieldTypeChoices
 from extras.models import CustomField
-from extras.utils import FeatureQuery
 from .utils import content_type_name
 from .paginator import EnhancedPaginator, get_paginate_count
 
@@ -23,19 +23,28 @@ class BaseTable(tables.Table):
 
     :param user: Personalize table display for the given user (optional). Has no effect if AnonymousUser is passed.
     """
+    id = tables.Column(
+        linkify=True,
+        verbose_name='ID'
+    )
 
     class Meta:
         attrs = {
             'class': 'table table-hover object-list',
         }
 
-    def __init__(self, *args, user=None, **kwargs):
+    def __init__(self, *args, user=None, extra_columns=None, **kwargs):
         # Add custom field columns
         obj_type = ContentType.objects.get_for_model(self._meta.model)
-        for cf in CustomField.objects.filter(content_types=obj_type):
-            self.base_columns[f'cf_{cf.name}'] = CustomFieldColumn(cf)
+        cf_columns = [
+            (f'cf_{cf.name}', CustomFieldColumn(cf)) for cf in CustomField.objects.filter(content_types=obj_type)
+        ]
+        if extra_columns is not None:
+            extra_columns.extend(cf_columns)
+        else:
+            extra_columns = cf_columns
 
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, extra_columns=extra_columns, **kwargs)
 
         # Set default empty_text if none was provided
         if self.empty_text is None:
@@ -50,24 +59,31 @@ class BaseTable(tables.Table):
 
         # Apply custom column ordering for user
         if user is not None and not isinstance(user, AnonymousUser):
-            columns = user.config.get(f"tables.{self.__class__.__name__}.columns")
-            if columns:
-                pk = self.base_columns.pop('pk', None)
-                actions = self.base_columns.pop('actions', None)
+            selected_columns = user.config.get(f"tables.{self.__class__.__name__}.columns")
+            if selected_columns:
 
-                for name, column in self.base_columns.items():
-                    if name in columns:
+                # Show only persistent or selected columns
+                for name, column in self.columns.items():
+                    if name in ['pk', 'actions', *selected_columns]:
                         self.columns.show(name)
                     else:
                         self.columns.hide(name)
-                self.sequence = [c for c in columns if c in self.base_columns]
 
-                # Always include PK and actions column, if defined on the table
-                if pk:
-                    self.base_columns['pk'] = pk
+                # Rearrange the sequence to list selected columns first, followed by all remaining columns
+                # TODO: There's probably a more clever way to accomplish this
+                self.sequence = [
+                    *[c for c in selected_columns if c in self.columns.names()],
+                    *[c for c in self.columns.names() if c not in selected_columns]
+                ]
+
+                # PK column should always come first
+                if 'pk' in self.sequence:
+                    self.sequence.remove('pk')
                     self.sequence.insert(0, 'pk')
-                if actions:
-                    self.base_columns['actions'] = actions
+
+                # Actions column should always come last
+                if 'actions' in self.sequence:
+                    self.sequence.remove('actions')
                     self.sequence.append('actions')
 
         # Dynamically update the table's QuerySet to ensure related fields are pre-fetched
@@ -110,6 +126,16 @@ class BaseTable(tables.Table):
     @property
     def selected_columns(self):
         return self._get_columns(visible=True)
+
+    @property
+    def objects_count(self):
+        """
+        Return the total number of real objects represented by the Table. This is useful when dealing with
+        prefixes/IP addresses/etc., where some table rows may represent available address space.
+        """
+        if not hasattr(self, '_objects_count'):
+            self._objects_count = sum(1 for obj in self.data if hasattr(obj, 'pk'))
+        return self._objects_count
 
 
 #
@@ -155,6 +181,25 @@ class BooleanColumn(tables.Column):
 
     def value(self, value):
         return str(value)
+
+
+class TemplateColumn(tables.TemplateColumn):
+    """
+    Overrides the stock TemplateColumn to render a placeholder if the returned value is an empty string.
+    """
+    PLACEHOLDER = mark_safe('&mdash;')
+
+    def render(self, *args, **kwargs):
+        ret = super().render(*args, **kwargs)
+        if not ret.strip():
+            return self.PLACEHOLDER
+        return ret
+
+    def value(self, **kwargs):
+        ret = super().value(**kwargs)
+        if ret == self.PLACEHOLDER:
+            return ''
+        return ret
 
 
 class ButtonsColumn(tables.TemplateColumn):
@@ -356,6 +401,9 @@ class CustomFieldColumn(tables.Column):
     def render(self, value):
         if isinstance(value, list):
             return ', '.join(v for v in value)
+        elif self.customfield.type == CustomFieldTypeChoices.TYPE_URL:
+            # Linkify custom URLs
+            return mark_safe(f'<a href="{value}">{value}</a>')
         return value or self.default
 
 
@@ -393,6 +441,28 @@ class UtilizationColumn(tables.TemplateColumn):
 
     def value(self, value):
         return f'{value}%'
+
+
+class MarkdownColumn(tables.TemplateColumn):
+    """
+    Render a Markdown string.
+    """
+    template_code = """
+    {% load helpers %}
+    {% if value %}
+      {{ value|render_markdown }}
+    {% else %}
+      &mdash;
+    {% endif %}
+    """
+
+    def __init__(self):
+        super().__init__(
+            template_code=self.template_code
+        )
+
+    def value(self, value):
+        return value
 
 
 #

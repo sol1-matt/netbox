@@ -17,8 +17,13 @@ Begin by installing all system packages required by NetBox and its dependencies.
 
 === "CentOS"
 
+    !!! warning
+        CentOS 8 does not provide Python 3.7 or later via its native package manager. You will need to install it via some other means. [Here is an example](https://tecadmin.net/install-python-3-7-on-centos-8/) of installing Python 3.7 from source.
+
+    Once you have Python 3.7 or later installed, install the remaining system packages:
+
     ```no-highlight
-    sudo yum install -y gcc python36 python36-devel python3-pip libxml2-devel libxslt-devel libffi-devel libpq-devel openssl-devel redhat-rpm-config
+    sudo yum install -y gcc libxml2-devel libxslt-devel libffi-devel libpq-devel openssl-devel redhat-rpm-config
     ```
 
 Before continuing with either platform, update pip (Python's package management tool) to its latest release:
@@ -259,10 +264,10 @@ python3 manage.py createsuperuser
 
 NetBox includes a `housekeeping` management command that handles some recurring cleanup tasks, such as clearing out old sessions and expired change records. Although this command may be run manually, it is recommended to configure a scheduled job using the system's `cron` daemon or a similar utility.
 
-A shell script which invokes this command is included at `contrib/netbox-housekeeping.sh`. It can be copied to your system's daily cron task directory, or included within the crontab directly. (If installing NetBox into a nonstandard path, be sure to update the system paths within this script first.)
+A shell script which invokes this command is included at `contrib/netbox-housekeeping.sh`. It can be copied to or linked from your system's daily cron task directory, or included within the crontab directly. (If installing NetBox into a nonstandard path, be sure to update the system paths within this script first.)
 
 ```shell
-cp /opt/netbox/contrib/netbox-housekeeping.sh /etc/cron.daily/
+ln -s /opt/netbox/contrib/netbox-housekeeping.sh /etc/cron.daily/netbox-housekeeping
 ```
 
 See the [housekeeping documentation](../administration/housekeeping.md) for further details.

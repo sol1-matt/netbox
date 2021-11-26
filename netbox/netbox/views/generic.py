@@ -283,13 +283,10 @@ class ObjectEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
                 if '_addanother' in request.POST:
                     redirect_url = request.path
-                    return_url = request.GET.get('return_url')
-                    if return_url is not None and is_safe_url(url=return_url, allowed_hosts=request.get_host()):
-                        redirect_url = f'{redirect_url}?return_url={return_url}'
 
                     # If the object has clone_fields, pre-populate a new instance of the form
                     if hasattr(obj, 'clone_fields'):
-                        redirect_url += f"{'&' if return_url else '?'}{prepare_cloned_fields(obj)}"
+                        redirect_url += f"?{prepare_cloned_fields(obj)}"
 
                     return redirect(redirect_url)
 
@@ -780,8 +777,21 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
         else:
             pk_list = request.POST.getlist('pk')
 
+        # Include the PK list as initial data for the form
+        initial_data = {'pk': pk_list}
+
+        # Check for other contextual data needed for the form. We avoid passing all of request.GET because the
+        # filter values will conflict with the bulk edit form fields.
+        # TODO: Find a better way to accomplish this
+        if 'device' in request.GET:
+            initial_data['device'] = request.GET.get('device')
+        elif 'device_type' in request.GET:
+            initial_data['device_type'] = request.GET.get('device_type')
+        elif 'virtual_machine' in request.GET:
+            initial_data['virtual_machine'] = request.GET.get('virtual_machine')
+
         if '_apply' in request.POST:
-            form = self.form(model, request.POST)
+            form = self.form(model, request.POST, initial=initial_data)
             restrict_form_fields(form, request.user)
 
             if form.is_valid():
@@ -824,14 +834,14 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                                     if form.cleaned_data[name]:
                                         getattr(obj, name).set(form.cleaned_data[name])
                                 # Normal fields
-                                elif form.cleaned_data[name] not in (None, '', []):
+                                elif name in form.changed_data:
                                     setattr(obj, name, form.cleaned_data[name])
 
                             # Update custom fields
                             for name in custom_fields:
                                 if name in form.nullable_fields and name in nullified_fields:
                                     obj.custom_field_data[name] = None
-                                elif form.cleaned_data.get(name) not in (None, ''):
+                                elif name in form.changed_data:
                                     obj.custom_field_data[name] = form.cleaned_data[name]
 
                             obj.full_clean()
@@ -870,16 +880,6 @@ class BulkEditView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
                 logger.debug("Form validation failed")
 
         else:
-            # Include the PK list as initial data for the form
-            initial_data = {'pk': pk_list}
-
-            # Check for other contextual data needed for the form. We avoid passing all of request.GET because the
-            # filter values will conflict with the bulk edit form fields.
-            # TODO: Find a better way to accomplish this
-            if 'device' in request.GET:
-                initial_data['device'] = request.GET.get('device')
-            elif 'device_type' in request.GET:
-                initial_data['device_type'] = request.GET.get('device_type')
 
             form = self.form(model, initial=initial_data)
             restrict_form_fields(form, request.user)
@@ -1010,10 +1010,10 @@ class BulkDeleteView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View):
 
         # Are we deleting *all* objects in the queryset or just a selected subset?
         if request.POST.get('_all'):
+            qs = model.objects.all()
             if self.filterset is not None:
-                pk_list = [obj.pk for obj in self.filterset(request.GET, model.objects.only('pk')).qs]
-            else:
-                pk_list = model.objects.values_list('pk', flat=True)
+                qs = self.filterset(request.GET, qs).qs
+            pk_list = qs.only('pk').values_list('pk', flat=True)
         else:
             pk_list = [int(pk) for pk in request.POST.getlist('pk')]
 
@@ -1100,6 +1100,7 @@ class ComponentCreateView(GetReturnURLMixin, ObjectPermissionRequiredMixin, View
         form = self.form(initial=request.GET)
 
         return render(request, self.template_name, {
+            'obj': self.queryset.model(),
             'obj_type': self.queryset.model._meta.verbose_name,
             'form': form,
             'return_url': self.get_return_url(request),

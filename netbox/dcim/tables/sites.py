@@ -3,7 +3,7 @@ import django_tables2 as tables
 from dcim.models import Location, Region, Site, SiteGroup
 from tenancy.tables import TenantColumn
 from utilities.tables import (
-    BaseTable, ButtonsColumn, ChoiceFieldColumn, LinkedCountColumn, MPTTColumn, TagColumn, ToggleColumn,
+    BaseTable, ButtonsColumn, ChoiceFieldColumn, LinkedCountColumn, MarkdownColumn, MPTTColumn, TagColumn, ToggleColumn,
 )
 from .template_code import LOCATION_ELEVATIONS
 
@@ -33,7 +33,7 @@ class RegionTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Region
-        fields = ('pk', 'name', 'slug', 'site_count', 'description', 'actions')
+        fields = ('pk', 'id', 'name', 'slug', 'site_count', 'description', 'actions')
         default_columns = ('pk', 'name', 'site_count', 'description', 'actions')
 
 
@@ -55,7 +55,7 @@ class SiteGroupTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = SiteGroup
-        fields = ('pk', 'name', 'slug', 'site_count', 'description', 'actions')
+        fields = ('pk', 'id', 'name', 'slug', 'site_count', 'description', 'actions')
         default_columns = ('pk', 'name', 'site_count', 'description', 'actions')
 
 
@@ -76,6 +76,7 @@ class SiteTable(BaseTable):
         linkify=True
     )
     tenant = TenantColumn()
+    comments = MarkdownColumn()
     tags = TagColumn(
         url_name='dcim:site_list'
     )
@@ -83,9 +84,9 @@ class SiteTable(BaseTable):
     class Meta(BaseTable.Meta):
         model = Site
         fields = (
-            'pk', 'name', 'slug', 'status', 'facility', 'region', 'group', 'tenant', 'asn', 'time_zone', 'description',
+            'pk', 'id', 'name', 'slug', 'status', 'facility', 'region', 'group', 'tenant', 'asn', 'time_zone', 'description',
             'physical_address', 'shipping_address', 'latitude', 'longitude', 'contact_name', 'contact_phone',
-            'contact_email', 'tags',
+            'contact_email', 'comments', 'tags',
         )
         default_columns = ('pk', 'name', 'status', 'facility', 'region', 'group', 'tenant', 'asn', 'description')
 
@@ -119,5 +120,5 @@ class LocationTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = Location
-        fields = ('pk', 'name', 'site', 'rack_count', 'device_count', 'description', 'slug', 'actions')
+        fields = ('pk', 'id', 'name', 'site', 'rack_count', 'device_count', 'description', 'slug', 'actions')
         default_columns = ('pk', 'name', 'site', 'rack_count', 'device_count', 'description', 'actions')

@@ -5,13 +5,11 @@ CABLETERMINATION = """
     <i class="mdi mdi-chevron-right"></i>
   {% endif %}
   <a href="{{ value.get_absolute_url }}">{{ value }}</a>
-{% else %}
-  &mdash;
 {% endif %}
 """
 
 CABLE_LENGTH = """
-{% if record.length %}{{ record.length }} {{ record.get_length_unit_display }}{% else %}&mdash;{% endif %}
+{% if record.length %}{{ record.length }} {{ record.get_length_unit_display }}{% endif %}
 """
 
 CABLE_TERMINATION_PARENT = """
@@ -42,17 +40,13 @@ DEVICEBAY_STATUS = """
 
 INTERFACE_IPADDRESSES = """
 <div class="table-badge-group">
-    {% for ip in record.ip_addresses.all %}
-        <a
-        class="table-badge{% if ip.status != 'active' %} badge bg-{{ ip.get_status_class }}{% elif ip.role %} badge bg-{{ ip.get_role_class }}{% endif %}"
-        href="{{ ip.get_absolute_url }}"
-        {% if ip.status != 'active'%}data-bs-toggle="tooltip" data-bs-placement="left" title="{{ ip.get_status_display }}"
-        {% elif ip.role %}data-bs-toggle="tooltip" data-bs-placement="left" title="{{ ip.get_role_display }}"
-        {% endif %}
-        >
-        {{ ip }}
-        </a>
-    {% endfor %}
+  {% for ip in record.ip_addresses.all %}
+    {% if ip.status != 'active' %}
+      <a href="{{ ip.get_absolute_url }}" class="table-badge badge bg-{{ ip.get_status_class }}" data-bs-toggle="tooltip" data-bs-placement="left" title="{{ ip.get_status_display }}">{{ ip }}</a>
+    {% else %}
+      <a href="{{ ip.get_absolute_url }}" class="table-badge">{{ ip }}</a>
+    {% endif %}
+  {% endfor %}
 </div>
 """
 
@@ -63,8 +57,6 @@ INTERFACE_TAGGED_VLANS = """
     {% endfor %}
 {% elif record.mode == 'tagged-all' %}
   All
-{% else %}
-  &mdash;
 {% endif %}
 """
 

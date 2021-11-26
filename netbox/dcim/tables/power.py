@@ -1,7 +1,7 @@
 import django_tables2 as tables
 
 from dcim.models import PowerFeed, PowerPanel
-from utilities.tables import BaseTable, ChoiceFieldColumn, LinkedCountColumn, TagColumn, ToggleColumn
+from utilities.tables import BaseTable, ChoiceFieldColumn, LinkedCountColumn, MarkdownColumn, TagColumn, ToggleColumn
 from .devices import CableTerminationTable
 
 __all__ = (
@@ -33,7 +33,7 @@ class PowerPanelTable(BaseTable):
 
     class Meta(BaseTable.Meta):
         model = PowerPanel
-        fields = ('pk', 'name', 'site', 'location', 'powerfeed_count', 'tags')
+        fields = ('pk', 'id', 'name', 'site', 'location', 'powerfeed_count', 'tags')
         default_columns = ('pk', 'name', 'site', 'location', 'powerfeed_count')
 
 
@@ -62,6 +62,7 @@ class PowerFeedTable(CableTerminationTable):
     available_power = tables.Column(
         verbose_name='Available power (VA)'
     )
+    comments = MarkdownColumn()
     tags = TagColumn(
         url_name='dcim:powerfeed_list'
     )
@@ -69,9 +70,9 @@ class PowerFeedTable(CableTerminationTable):
     class Meta(BaseTable.Meta):
         model = PowerFeed
         fields = (
-            'pk', 'name', 'power_panel', 'rack', 'status', 'type', 'supply', 'voltage', 'amperage', 'phase',
+            'pk', 'id', 'name', 'power_panel', 'rack', 'status', 'type', 'supply', 'voltage', 'amperage', 'phase',
             'max_utilization', 'mark_connected', 'cable', 'cable_color', 'cable_peer', 'connection', 'available_power',
-            'tags',
+            'comments', 'tags',
         )
         default_columns = (
             'pk', 'name', 'power_panel', 'rack', 'status', 'type', 'supply', 'voltage', 'amperage', 'phase', 'cable',

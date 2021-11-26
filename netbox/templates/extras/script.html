@@ -1,9 +1,13 @@
-{% extends 'base/layout.html' %}
+{% extends 'generic/object.html' %}
 {% load helpers %}
 {% load form_helpers %}
 {% load log_levels %}
 
 {% block title %}{{ script }}{% endblock %}
+
+{% block object_identifier %}
+  {{ script.full_name }}
+{% endblock %}
 
 {% block breadcrumbs %}
   <li class="breadcrumb-item"><a href="{% url 'extras:script_list' %}">Scripts</a></li>
@@ -15,6 +19,8 @@
     <div class="text-muted">{{ script.Meta.description|render_markdown }}</div>
   </div>
 {% endblock %}
+
+{% block controls %}{% endblock %}
 
 {% block tabs %}
 <ul class="nav nav-tabs px-3">

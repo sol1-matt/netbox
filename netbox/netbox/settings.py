@@ -4,6 +4,7 @@ import os
 import platform
 import re
 import socket
+import sys
 import warnings
 from urllib.parse import urlsplit
 
@@ -16,7 +17,7 @@ from django.core.validators import URLValidator
 # Environment setup
 #
 
-VERSION = '3.0.2'
+VERSION = '3.0.10'
 
 # Hostname
 HOSTNAME = platform.node()
@@ -25,7 +26,7 @@ HOSTNAME = platform.node()
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 # Validate Python version
-if platform.python_version_tuple() < ('3', '7'):
+if sys.version_info < (3, 7):
     raise RuntimeError(
         f"NetBox requires Python 3.7 or higher (current: Python {platform.python_version()})"
     )
@@ -126,7 +127,7 @@ REMOTE_AUTH_SUPERUSER_GROUPS = getattr(configuration, 'REMOTE_AUTH_SUPERUSER_GRO
 REMOTE_AUTH_SUPERUSERS = getattr(configuration, 'REMOTE_AUTH_SUPERUSERS', [])
 REMOTE_AUTH_STAFF_GROUPS = getattr(configuration, 'REMOTE_AUTH_STAFF_GROUPS', [])
 REMOTE_AUTH_STAFF_USERS = getattr(configuration, 'REMOTE_AUTH_STAFF_USERS', [])
-REMOTE_AUTH_GROUP_SEPERATOR = getattr(configuration, 'REMOTE_AUTH_GROUP_SEPERATOR', '|')
+REMOTE_AUTH_GROUP_SEPARATOR = getattr(configuration, 'REMOTE_AUTH_GROUP_SEPARATOR', '|')
 RELEASE_CHECK_URL = getattr(configuration, 'RELEASE_CHECK_URL', None)
 REPORTS_ROOT = getattr(configuration, 'REPORTS_ROOT', os.path.join(BASE_DIR, 'reports')).rstrip('/')
 RQ_DEFAULT_TIMEOUT = getattr(configuration, 'RQ_DEFAULT_TIMEOUT', 300)
@@ -262,6 +263,7 @@ if CACHING_REDIS_SENTINELS:
     CACHES['default']['OPTIONS']['CLIENT_CLASS'] = 'django_redis.client.SentinelClient'
     CACHES['default']['OPTIONS']['SENTINELS'] = CACHING_REDIS_SENTINELS
 if CACHING_REDIS_SKIP_TLS_VERIFY:
+    CACHES['default']['OPTIONS'].setdefault('CONNECTION_POOL_KWARGS', {})
     CACHES['default']['OPTIONS']['CONNECTION_POOL_KWARGS']['ssl_cert_reqs'] = False
 
 

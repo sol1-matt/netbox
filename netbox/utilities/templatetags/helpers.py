@@ -6,6 +6,7 @@ from typing import Dict, Any
 import yaml
 from django import template
 from django.conf import settings
+from django.contrib.contenttypes.models import ContentType
 from django.template.defaultfilters import date
 from django.urls import NoReverseMatch, reverse
 from django.utils import timezone
@@ -39,13 +40,18 @@ def render_markdown(value):
     """
     Render text as Markdown
     """
+    schemes = '|'.join(settings.ALLOWED_URL_SCHEMES)
+
     # Strip HTML tags
     value = strip_tags(value)
 
     # Sanitize Markdown links
-    schemes = '|'.join(settings.ALLOWED_URL_SCHEMES)
-    pattern = fr'\[(.+)\]\((?!({schemes})).*:(.+)\)'
+    pattern = fr'\[([^\]]+)\]\((?!({schemes})).*:(.+)\)'
     value = re.sub(pattern, '[\\1](\\3)', value, flags=re.IGNORECASE)
+
+    # Sanitize Markdown reference links
+    pattern = fr'\[(.+)\]:\w?(?!({schemes})).*:(.+)'
+    value = re.sub(pattern, '[\\1]: \\3', value, flags=re.IGNORECASE)
 
     # Render Markdown
     html = markdown(value, extensions=['fenced_code', 'tables'])
@@ -58,7 +64,7 @@ def render_json(value):
     """
     Render a dictionary as formatted JSON.
     """
-    return json.dumps(value, indent=4, sort_keys=True)
+    return json.dumps(value, ensure_ascii=False, indent=4, sort_keys=True)
 
 
 @register.filter()
@@ -76,6 +82,25 @@ def meta(obj, attr):
     to access attributes which begin with an underscore (e.g. _meta).
     """
     return getattr(obj._meta, attr, '')
+
+
+@register.filter()
+def content_type(obj):
+    """
+    Return the ContentType for the given object.
+    """
+    return ContentType.objects.get_for_model(obj)
+
+
+@register.filter()
+def content_type_id(obj):
+    """
+    Return the ContentType ID for the given object.
+    """
+    content_type = ContentType.objects.get_for_model(obj)
+    if content_type:
+        return content_type.pk
+    return None
 
 
 @register.filter()
@@ -216,27 +241,11 @@ def percentage(x, y):
 
 
 @register.filter()
-def get_docs(model):
+def get_docs_url(model):
     """
-    Render and return documentation for the specified model.
+    Return the documentation URL for the specified model.
     """
-    path = '{}/models/{}/{}.md'.format(
-        settings.DOCS_ROOT,
-        model._meta.app_label,
-        model._meta.model_name
-    )
-    try:
-        with open(path, encoding='utf-8') as docfile:
-            content = docfile.read()
-    except FileNotFoundError:
-        return "Unable to load documentation, file not found: {}".format(path)
-    except IOError:
-        return "Unable to load documentation, error reading file: {}".format(path)
-
-    # Render Markdown with the admonition extension
-    content = markdown(content, extensions=['admonition', 'fenced_code', 'tables'])
-
-    return mark_safe(content)
+    return f'{settings.STATIC_URL}docs/models/{model._meta.app_label}/{model._meta.model_name}/'
 
 
 @register.filter()
@@ -411,10 +420,13 @@ def applied_filters(form, query_params):
     Display the active filters for a given filter form.
     """
     form.is_valid()
-    querydict = query_params.copy()
 
     applied_filters = []
     for filter_name in form.changed_data:
+        if filter_name not in form.cleaned_data:
+            continue
+
+        querydict = query_params.copy()
         if filter_name not in querydict:
             continue
 

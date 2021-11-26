@@ -74,6 +74,7 @@ $btn-link-disabled-color: $gray-300;
 
 // Forms
 $component-active-bg: $primary;
+$component-active-color: $black;
 $form-text-color: $text-muted;
 $input-bg: $gray-900;
 $input-disabled-bg: $gray-700;
@@ -82,7 +83,7 @@ $input-border-color: $gray-700;
 $input-focus-bg: $input-bg;
 $input-focus-border-color: tint-color($component-active-bg, 10%);
 $input-focus-color: $input-color;
-$input-placeholder-color: $gray-300;
+$input-placeholder-color: $gray-700;
 $input-plaintext-color: $body-color;
 
 $form-check-input-active-filter: brightness(90%);

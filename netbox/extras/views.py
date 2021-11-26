@@ -472,22 +472,22 @@ class ImageAttachmentEditView(generic.ObjectEditView):
     queryset = ImageAttachment.objects.all()
     model_form = forms.ImageAttachmentForm
 
-    def alter_obj(self, imageattachment, request, args, kwargs):
-        if not imageattachment.pk:
+    def alter_obj(self, instance, request, args, kwargs):
+        if not instance.pk:
             # Assign the parent object based on URL kwargs
-            model = kwargs.get('model')
-            imageattachment.parent = get_object_or_404(model, pk=kwargs['object_id'])
-        return imageattachment
+            content_type = get_object_or_404(ContentType, pk=request.GET.get('content_type'))
+            instance.parent = get_object_or_404(content_type.model_class(), pk=request.GET.get('object_id'))
+        return instance
 
-    def get_return_url(self, request, imageattachment):
-        return imageattachment.parent.get_absolute_url()
+    def get_return_url(self, request, obj=None):
+        return obj.parent.get_absolute_url() if obj else super().get_return_url(request)
 
 
 class ImageAttachmentDeleteView(generic.ObjectDeleteView):
     queryset = ImageAttachment.objects.all()
 
-    def get_return_url(self, request, imageattachment):
-        return imageattachment.parent.get_absolute_url()
+    def get_return_url(self, request, obj=None):
+        return obj.parent.get_absolute_url() if obj else super().get_return_url(request)
 
 
 #

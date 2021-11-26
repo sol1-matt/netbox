@@ -4,7 +4,6 @@ import logging
 import os
 import pkgutil
 import traceback
-import warnings
 from collections import OrderedDict
 
 import yaml
@@ -345,9 +344,14 @@ class BaseScript:
         """
         Return data from a YAML file
         """
+        try:
+            from yaml import CLoader as Loader
+        except ImportError:
+            from yaml import Loader
+
         file_path = os.path.join(settings.SCRIPTS_ROOT, filename)
         with open(file_path, 'r') as datafile:
-            data = yaml.load(datafile)
+            data = yaml.load(datafile, Loader=Loader)
 
         return data
 
@@ -470,7 +474,6 @@ def get_scripts(use_names=False):
     defined name in place of the actual module name.
     """
     scripts = OrderedDict()
-
     # Iterate through all modules within the reports path. These are the user-created files in which reports are
     # defined.
     for importer, module_name, _ in pkgutil.iter_modules([settings.SCRIPTS_ROOT]):
@@ -478,8 +481,11 @@ def get_scripts(use_names=False):
         if use_names and hasattr(module, 'name'):
             module_name = module.name
         module_scripts = OrderedDict()
-        for name, cls in inspect.getmembers(module, is_script):
-            module_scripts[name] = cls
+        script_order = getattr(module, "script_order", ())
+        ordered_scripts = [cls for cls in script_order if is_script(cls)]
+        unordered_scripts = [cls for _, cls in inspect.getmembers(module, is_script) if cls not in script_order]
+        for cls in [*ordered_scripts, *unordered_scripts]:
+            module_scripts[cls.__name__] = cls
         if module_scripts:
             scripts[module_name] = module_scripts
 

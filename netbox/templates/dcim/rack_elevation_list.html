@@ -7,9 +7,13 @@
 {% block controls %}
     <div class="controls">
         <div class="control-group">
-            <button class="btn btn-sm btn-outline-dark toggle-images" selected="selected">
-                <span class="mdi mdi mdi-checkbox-marked-circle-outline" aria-hidden="true"></span> Show Images
-            </button>
+            <div class="btn-group btn-group-sm" role="group">
+                <select class="btn btn-sm btn-outline-secondary rack-view">
+                  <option value="images-and-labels" selected="selected">Images and Labels</option>
+                  <option value="images-only">Images only</option>
+                  <option value="labels-only">Labels only</option>
+                </select>
+            </div>
             <div class="btn-group btn-group-sm" role="group">
                 <a href="{% url 'dcim:rack_elevation_list' %}{% querystring request face='front' %}" class="btn btn-outline-secondary{% if rack_face == 'front' %} active{% endif %}">Front</a>
                 <a href="{% url 'dcim:rack_elevation_list' %}{% querystring request face='rear' %}" class="btn btn-outline-secondary{% if rack_face == 'rear' %} active{% endif %}">Rear</a>
@@ -30,7 +34,7 @@
       {% if page %}
           <div style="white-space: nowrap; overflow-x: scroll;">
               {% for rack in page %}
-                  <div style="display: inline-block; margin-right: 12px; width: 254px">
+                  <div style="display: inline-block; margin-right: 12px">
                   <div style="margin-left: 30px">
                       <div class="text-center">
                           <strong><a href="{% url 'dcim:rack' pk=rack.pk %}">{{ rack.name }}</a></strong>

@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls import include
 from django.urls import path, re_path
+from django.views.decorators.csrf import csrf_exempt
 from django.views.static import serve
 from drf_yasg import openapi
 from drf_yasg.views import get_schema_view
@@ -16,7 +17,7 @@ from .admin import admin_site
 
 openapi_info = openapi.Info(
     title="NetBox API",
-    default_version='v2',
+    default_version='v3',
     description="API to access NetBox",
     terms_of_service="https://github.com/netbox-community/netbox",
     license=openapi.License(name="Apache v2 License"),
@@ -58,12 +59,12 @@ _patterns = [
     path('api/users/', include('users.api.urls')),
     path('api/virtualization/', include('virtualization.api.urls')),
     path('api/status/', StatusView.as_view(), name='api-status'),
-    path('api/docs/', schema_view.with_ui('swagger'), name='api_docs'),
-    path('api/redoc/', schema_view.with_ui('redoc'), name='api_redocs'),
-    re_path(r'^api/swagger(?P<format>.json|.yaml)$', schema_view.without_ui(), name='schema_swagger'),
+    path('api/docs/', schema_view.with_ui('swagger', cache_timeout=86400), name='api_docs'),
+    path('api/redoc/', schema_view.with_ui('redoc', cache_timeout=86400), name='api_redocs'),
+    re_path(r'^api/swagger(?P<format>.json|.yaml)$', schema_view.without_ui(cache_timeout=86400), name='schema_swagger'),
 
     # GraphQL
-    path('graphql/', GraphQLView.as_view(graphiql=True, schema=schema), name='graphql'),
+    path('graphql/', csrf_exempt(GraphQLView.as_view(graphiql=True, schema=schema)), name='graphql'),
 
     # Serving static media in Django to pipe it through LoginRequiredMiddleware
     path('media/<path:path>', serve, {'document_root': settings.MEDIA_ROOT}),
