@@ -136,6 +136,7 @@ STORAGE_BACKEND = getattr(configuration, 'STORAGE_BACKEND', None)
 STORAGE_CONFIG = getattr(configuration, 'STORAGE_CONFIG', {})
 TIME_FORMAT = getattr(configuration, 'TIME_FORMAT', 'g:i a')
 TIME_ZONE = getattr(configuration, 'TIME_ZONE', 'UTC')
+USE_X_FORWARDED_PORT = getattr(configuration, 'USE_X_FORWARDED_PORT', False)
 
 # Check for hard-coded dynamic config parameters
 for param in PARAMS:
